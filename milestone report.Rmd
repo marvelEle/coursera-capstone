@@ -1,0 +1,255 @@
+---
+title: "Milestone Report"
+author: "Ele Elyiana"
+date: "March 20, 2016"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+## Introduction
+Milestone report is a part of assignment given by Data Science Capstone Project on Coursera. The contain of the report will be how I plan to build my prediction model with a data given. This report need to be created in a way that would be understandable to a non-data scientist manager.
+
+## Executive Summary
+This project objective is to create a product that will able to give a suggestion word when user type words into text input. We will create a predictive model in order to achive the goal.
+
+When the user typing the text, we will return next words with highest probabilty that match the word that user typing. The return words come from a set of data that have been process with predictive model.
+
+In order to create the word list, the course have provided a set of data which I need to download it from here [Capstone Dataset](https://eventing.coursera.org/api/redirectStrict/ffKXb_cFsjeSE1ZsUr2dc7icMRWjXgoFFTDs3_3GYiB1V0xA2McZYXtvNiqSylP7n4eNa1ssImLZnSEp9gjPkA.ytA15sBNE0rmed7LvY1r5g.0fo_ZgvwgB-NE8_Jf953tVYs7RikHsuePF4IOkNw85osibtvQ_s2PMvufgitDDeKq4DplY9RYAq5DhDfwoIDltLeZMT1Ei_nKxaKXBZC-TeD676ocaSj3ehSOk_bz16uOJBnE8hT6R3ZX2_xU6ZiIsv8aKp4iwHnGY_JxRzsvFladmebPr6cgRTX8m4D1WMThYgB6ADz3qBqtoZwdhuL0fO7E7XPkDqa83sXHtZCGX0dTknD7ZQAvfgR6jHuUxZzncLgD3nA-9YOUBxwQuiPWgLw8JH3EU1sENp8lZeU9PMJE-vDaSFWt2a211DgrqwEtKoQerP6_8hm2oqM2AnIpM_QMV4iCN7NnBk4h3iTyAWHcA8co7xaIGJuZ2cXE1g5SCfgDK04lXQKQi_-AKIkXfNBAbA-VggsO9wks3GfOCU).
+
+The challenge to build thus product is how to get the good sample data in order to meet the optimum requirement. Since the predictive model will be able to run in mobile, we will need to take care on memory limit the mobile can handle. Which the product need to be as light as possible.
+
+## Data Summary
+
+```{r load data, cache=TRUE, echo=FALSE}
+set.seed(1010)
+library(qdap)
+blogs <- readLines(con <- file("en_US/en_us.blogs.txt"), encoding = "UTF-8", skipNul=TRUE, warn = FALSE)
+close(con)
+
+news <- readLines(con1 <- file("en_US/en_us.news.txt"), encoding = "UTF-8", skipNul=TRUE, warn = FALSE)
+close(con1)
+
+twitter <- readLines(con2 <- file("en_US/en_us.twitter.txt"), encoding = "UTF-8", skipNul=TRUE, warn = FALSE)
+close(con2)
+
+```
+
+For this project we will use only **en_US** folder. In the folder contain three files which is blogs, news and Twitter. The summary of data as below:
+
+```{r Summary of data,echo=FALSE, cache=TRUE}
+summaryTable <- data.frame(
+  "Source"=c("Blogs","News","Twitter"),
+  "File Size"=c(file.info("en_US/en_us.blogs.txt")$size / 1024 /1000,file.info("en_US/en_us.news.txt")$size / 1024 /1000,file.info("en_US/en_us.twitter.txt")$size / 1024 /1000),
+  "Number of lines"=c(length(blogs),length(news),length(twitter)),
+  "Number of words"=c(sum(sapply(gregexpr("\\S+", blogs), length)),sum(sapply(gregexpr("\\S+", news), length)),sum(sapply(gregexpr("\\S+", twitter), length))),
+  "Average length"=c(mean(nchar(blogs)),mean(nchar(news)),mean(nchar(twitter))),
+  "Min length"=c(min(nchar(blogs)),min(nchar(news)),min(nchar(twitter))),
+  "Max length"=c(max(nchar(blogs)),max(nchar(news)),max(nchar(twitter)))
+  )
+
+knitr::kable(summaryTable)
+```
+
+From the table above, we can see that __Blogs__ have the biggest file size and the longest words length. __Twitter__ have the shortest words length, which is 140 where the __Twitter__ platform only allow user submit 140 characters long. The average length for all three sources is less than 1000, shows that not all the lines exceed 1000 characters.
+
+```{r Pie Chart number of lines, cache=TRUE, echo=FALSE}
+  x <-  c(length(blogs), length(news), length(twitter))
+    labels <-  c("Blogs","News","Twitter")
+
+    piepercent<- round(100*x/sum(x), 1)
+
+    # Plot the chart.
+    pie(x, labels = piepercent, main = "Number of Lines chart",col = rainbow(length(x)))
+    legend("topright", c("Blogs","News","Twitter"), cex = 0.8,
+       fill = rainbow(length(x)))
+
+```
+
+The pie chart value above in percent. This shows that if we combine all three data into one sample data, 70.7% of the data come from twitter, 27% from blogs and 2.3% from news. The chart value is the number of lines from each data source.
+
+It pretty much help in making the decision in sampling the data.
+
+## Data Sampling
+
+From the pie chart in the previous section, I will used 0.1% of data from news and blogs. While 0.05% data from Twitter.
+```{r Sampling Data, echo=FALSE, cache=TRUE}
+    cleanedBlogs <- iconv(blogs, 'UTF-8', 'ASCII', "byte")
+    cleanedBlogs <- (cleanedBlogs[!is.na(cleanedBlogs)])
+    
+    smplBlogs <- sample(cleanedBlogs,round(0.001*length(cleanedBlogs)))
+    
+    cleanedNews <- iconv(news, 'UTF-8', 'ASCII', "byte")
+    cleanedNews <- (cleanedNews[!is.na(cleanedNews)])
+    
+    
+    smplNews <- sample(cleanedNews,round(0.001*length(cleanedNews)))
+    
+    cleanedTwitter <- iconv(twitter, 'UTF-8', 'ASCII', "byte")
+    cleanedTwitter <- (cleanedTwitter[!is.na(cleanedTwitter)])
+    smplTwitter <- sample(cleanedTwitter,round(0.005*length(cleanedTwitter)))
+    
+   
+
+```
+
+Here the summary of sample data for each source.
+
+```{r summary sample data, echo=FALSE, cache=TRUE}
+    
+summaryTableSample <- data.frame(
+  "Source"=c("Blogs","News","Twitter"),
+  "Number of lines"=c(length(smplBlogs),length(smplNews),length(smplTwitter)),
+  "Number of words"=c(sum(sapply(gregexpr("\\S+", smplBlogs), length)),sum(sapply(gregexpr("\\S+", smplNews), length)),sum(sapply(gregexpr("\\S+", smplTwitter), length))),
+  "Average length"=c(mean(nchar(smplBlogs)),mean(nchar(smplNews)),mean(nchar(smplTwitter))),
+  "Min length"=c(min(nchar(smplBlogs)),min(nchar(smplNews)),min(nchar(smplTwitter))),
+  "Max length"=c(max(nchar(smplBlogs)),max(nchar(smplNews)),max(nchar(smplTwitter)))
+  )
+
+knitr::kable(summaryTableSample)
+```
+From here you can see the number of lines of each source are decreasing. Here the summary data when all the data being combine.
+
+```{r Combine data, echo=FALSE, cache=TRUE}
+    combineData <- c(smplBlogs, smplNews, smplTwitter)
+    summaryTableCombine <- data.frame(
+      "Source"=c("Combine"),
+      "Number of lines"=c(length(combineData)),
+      "Average length"=c(mean(nchar(combineData))),
+      "Min length"=c(min(nchar(combineData))),
+      "Max length"=c(max(nchar(combineData)))
+    )
+
+knitr::kable(summaryTableCombine)
+
+```
+
+## Courpus and Tokenising
+
+Now its time to create the Coupus using `tm` library. We will also clean again the data with the tm library function. Such as remove urls, hashtag, and also bad words. Than we will create n-grams token with `RWeka` library. Lastly, we will do backoff algorith manually.
+
+```{r Create Corpus, warning=FALSE, cache=TRUE}
+library(NLP)
+library(tm)
+library(RWeka)
+  
+  # convert to vector 
+  corpus <- Corpus(VectorSource(combineData))
+
+  # Convert to lowercase
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  
+  # remove emails
+  removeEmails <- function(x) {gsub("\\S+@\\S+", "", x)}
+  corpus <- tm_map(corpus,removeEmails)
+
+  # remove URLS
+  removeUrls <- function(x) {gsub("http[[:alnum:]]*","",x)}
+  corpus <- tm_map(corpus,removeUrls)
+ 
+  # Remove Twitter hashtags
+  removeHashtags <- function(x) {gsub("#[[:alnum:]]*","",x)}
+  corpus <- tm_map(corpus,removeHashtags)
+
+  # remove Twitter handles (e.g. @username)
+  removeHandles <- function(x) {gsub("@[[:alnum:]]*","",x)}
+  corpus <- tm_map(corpus,removeHandles)
+ 
+  # remove twitter specific terms like RT (retweet) and PM (private message)
+  corpus <- tm_map(corpus, removeWords, c("rt","pm","p m"))
+
+  # remove punctuation, numbers, whitespace, numbers  
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, removeWords, stopwords("en"))
+  badwords <- read.csv('./swearWords.csv',stringsAsFactors = FALSE,header=FALSE)
+   
+   corpus <- tm_map(corpus, removeWords, badwords)
+   corpus <- tm_map(corpus, PlainTextDocument)
+   save(corpus,file="sampleCorpus.RData")
+
+```
+
+Now we will create the token using `NGramTokenizer` function. I create five token. Unigram, bigram, trigram, fourgram and fivegram.
+
+```{r tokenize , warning=FALSE, cache=TRUE}
+  # Create token function
+  # Unigram token
+   load("sampleCorpus.RData")
+  unigram_token <- function(x)
+    NGramTokenizer(x, Weka_control(min = 1, max = 1))
+
+  # bigram token
+  bigram_token <- function(x)
+    NGramTokenizer(x, Weka_control(min = 2, max = 2))
+  
+  #trigram token
+  trigram_token <- function(x)
+    NGramTokenizer(x, Weka_control(min = 3, max = 3))
+  
+  # N-gram data
+  unigram <- TermDocumentMatrix(corpus, control=list(tokenize=unigram_token))
+  save(unigram,file="unigram.RData")
+
+  bigram <- TermDocumentMatrix(corpus, control=list(tokenize=bigram_token))
+  save(unigram,file="bigram.RData")
+
+  trigram <- TermDocumentMatrix(corpus, control=list(tokenize=trigram_token))
+  save(unigram,file="trigram.RData")
+```
+Let's see what the N-grams content.
+
+```{r bi-grams details, warning=TRUE, cache=TRUE}
+bf <- findFreqTerms(bigram, lowfreq = 3)
+bf <- sort(rowSums(as.matrix(bigram[bf,])), decreasing = TRUE)
+bf <- data.frame(bigram=names(bf), frequency=bf)
+View(bf)
+```
+
+Tri-gram details.
+```{r tri-grams details, warning=FALSE, cache=TRUE}
+# Trigram
+tf <- findFreqTerms(trigram, lowfreq = 3)
+tf <- sort(rowSums(as.matrix(trigram[tf,])), decreasing = TRUE)
+tf <- data.frame(trigram=names(tf), frequency=tf)
+View(tf)
+```
+
+After preparing the N-grams content. We will use `backoff` in order to find the best next letters.
+To use `backoff` we will start with the highest gram first (Tri-gram).
+
+```{r backoff trigram, cache=TRUE, warning=FALSE}
+testTrigram <- trigram$dimnames$Terms[grep("^good luck ", trigram$dimnames$Terms)]
+length(testTrigram)
+```
+
+```{r backoff bigram, cache=TRUE, warning=FALSE }
+testBigram <- bigram$dimnames$Terms[grep("^luck ", bigram$dimnames$Terms)]
+length(testBigram)
+```
+
+If the length is `0`, means no match exist. So we will check the next grams
+
+If the match exist, we will check the frequency of the match data. 
+```{r get the highest frequency of match, warning=FALSE}
+tm <- sort(rowSums(as.matrix(trigram[testTrigram,])), decreasing = TRUE)
+tm <- data.frame(trigram=names(tm), frequency=tm)
+head(tm, 10)
+
+bm <- sort(rowSums(as.matrix(bigram[testBigram,])), decreasing = TRUE)
+bm <- data.frame(bigram=names(bm), frequency=bm)
+head(bm, 10)
+```
+
+## Conclusions
+
+All steps discuss above is what I will do for my shinyapp application. Will need to create a proper function for prediction algorithm. I might increase the number of data.Remove badwords. Thats all the report from me.
+
+Thank you.
+
+## Links
+1. All code can be find in my github account https://github.com/marvelEle/coursera-capstone
+
+
